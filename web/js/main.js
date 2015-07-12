@@ -9,9 +9,14 @@ var WALLS = {
     'BOTTOM' : 3
 };
 
+var gameLoop = setInterval(updateState,300);
+
+var wallColor = "rgb(0,0,0)";
 var mazeSize = 0;
 var cellSize = 20;
+var margin = 10;
 var maze = [];
+var player = $("#link");
 
 function oppositeWall(location){
     if(location === WALLS.LEFT){
@@ -30,12 +35,17 @@ function oppositeWall(location){
 }
 
 function createMaze(size){
+    //clearCanvas();
+    // TODO:  Figure out how to manipulate the DOM via jquery
+    var canvasDiv = document.getElementById("mazeDiv");
+    canvasDiv.style.display = "block";
     mazeSize = size;
+
     // Initialize the cells
     for(i=0;i<size;i++){
         maze[i]=[];
         for(j=0;j<size;j++){
-            var c = new Cell();
+            var c = new Cell(margin + (j*cellSize), margin + (i*cellSize));
             maze[i][j] = c;
             var left = j > 0 ? maze[i][j-1] : undefined;
             var top = i > 0 ?  maze[i-1][j] : undefined;
@@ -58,6 +68,21 @@ function createMaze(size){
     var randomY = randomInt(0,size-1);
     buildMaze(maze[randomX][randomY],stack);
     drawMaze(mazeSize,cellSize);
+    setAllCellsNotVisited(maze);
+}
+
+function setAllCellsNotVisited(maze){
+    for(var i = 0; i < maze.length; i++){
+        for(var j = 0; j < maze[i].length; j++){
+            maze[i][j].visited = false;
+        }
+    }
+}
+
+function clearCanvas(){
+    var canvas = document.getElementById("mazeCanvas");
+    canvas.getContext('2d')
+        .clearRect(0, 0, canvas.width, canvas.height);
 }
 
 function removeJoiningWall(cellOne,cellTwo){
@@ -80,6 +105,10 @@ function removeJoiningWall(cellOne,cellTwo){
     }
 }
 
+function updateState(){
+
+}
+
 function buildMaze(cell, visitedCells){
     if(cell == null){
         if(visitedCells.length > 0){
@@ -94,52 +123,77 @@ function buildMaze(cell, visitedCells){
         var neighbor = cell.getRandomUnvisitedNeighbor();
 
         removeJoiningWall(cell,neighbor);
+        //drawCell(cell,cellSize);
         buildMaze(neighbor,visitedCells);
+    }
+}
+
+function drawCell(cell,csize,canvas,canvasContext) {
+    if (cell == null) {
+        return;
+    }
+
+    if (canvas == null) {
+        canvas = document.getElementById("maze_canvas");
+    }
+
+    if (canvasContext == null) {
+        canvasContext = canvas.getContext('2d');
+    }
+
+    var c = cell;
+    var x = c.POS.x;
+    var y = c.POS.y;
+    var path = new Path2D();
+    if(c.hasWall(WALLS.LEFT)){
+        path.moveTo(x,y);
+        path.lineTo(x,y+csize);
+        canvasContext.stroke(path);
+    }
+    if(c.hasWall(WALLS.BOTTOM)){
+        path.moveTo(x,y+csize);
+        path.lineTo(x+csize,y+csize);
+        canvasContext.stroke(path);
+    }
+    if(c.hasWall(WALLS.TOP)){
+        path.moveTo(x,y);
+        path.lineTo(x+csize,y);
+        canvasContext.stroke(path);
+    }
+    if(c.hasWall(WALLS.RIGHT)){
+        path.moveTo(x+csize,y);
+        path.lineTo(x+csize,y+csize);
+        canvasContext.stroke(path);
     }
 }
 
 function drawMaze(msize,csize){
     var canvas = document.getElementById("maze_canvas");
     var ctx = canvas.getContext('2d');
-    ctx.strokeStyle = "rgb(0,0,0)";
-    var x = 10;
-    var y = 10;
+    ctx.strokeStyle = wallColor;
     for(var i=0;i < msize;i++){
         for(var j=0;j < mazeSize; j++){
-            var c = maze[i][j];
-            var path = new Path2D();
-            if(c.hasWall(WALLS.LEFT)){
-                path.moveTo(x,y);
-                path.lineTo(x,y+csize);
-                ctx.stroke(path);
-            }
-            if(c.hasWall(WALLS.BOTTOM)){
-                path.moveTo(x,y+csize);
-                path.lineTo(x+csize,y+csize);
-                ctx.stroke(path);
-            }
-            if(c.hasWall(WALLS.TOP)){
-                path.moveTo(x,y);
-                path.lineTo(x+csize,y);
-                ctx.stroke(path);
-            }
-            if(c.hasWall(WALLS.RIGHT)){
-                path.moveTo(x+csize,y);
-                path.lineTo(x+csize,y+csize);
-                ctx.stroke(path);
-            }
-            x = x + csize;
+            drawCell(maze[i][j],csize,canvas,ctx);
         }
-        x = 10;
-        y = y + csize;
     }
 }
 
-function Cell(){
+function initializePlayer(){
+    player.css("top",10);
+}
+
+function Cell(x_pos,y_pos){
     this.visited = false;
     this.neighbors = [null,null,null,null];
     this.walls = [true,true,true,true];
     this.thing = null;
+    if(x_pos == null || x_pos < 0){
+        x_pos = 0;
+    }
+    if(y_pos == null || y_pos < 0){
+        y_pos = 0;
+    }
+    this.POS = { x: x_pos, y: y_pos};
 }
 
 Cell.prototype.addNeighbor = function (cell, location) {
@@ -199,6 +253,7 @@ function isThing(thing){
     return typeof thing !== 'undefined';
 }
 
+//TODO: "import" utility.js for this function.  I have no clue how to do this.
 function randomInt(){
 
     var min = isThing(arguments[0]) ? arguments[0] : 0;
